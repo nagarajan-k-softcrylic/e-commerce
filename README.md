@@ -3,12 +3,12 @@
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Blazor WebAssembly](https://img.shields.io/badge/Blazor-WebAssembly-512BD4?logo=blazor&logoColor=white)](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)
 [![Blazorise](https://img.shields.io/badge/Blazorise-Bootstrap%205-0d6efd)](https://blazorise.com/)
-[![YARP](https://img.shields.io/badge/YARP-Reverse%20Proxy-brightgreen)](https://microsoft.github.io/reverse-proxy/)
+[![Ocelot](https://img.shields.io/badge/Ocelot-API%20Gateway-brightgreen)](https://ocelot.readthedocs.io/)
 [![Azure SQL](https://img.shields.io/badge/Azure%20SQL-Database-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/en-us/products/azure-sql/)
 [![Azure Service Bus](https://img.shields.io/badge/Azure%20Service%20Bus-Messaging-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/en-us/products/service-bus/)
 [![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2B%20CQRS-orange)](#)
 
-A Production-Ready, Event-Driven E-Commerce Microservices Application designed and implemented using **.NET 8**, **Clean Architecture**, **CQRS with MediatR**, **YARP Reverse Proxy**, **Azure Service Bus**, **Azure SQL Database**, and a **Blazor WebAssembly** client built with **Blazorise (Bootstrap 5)**.
+A Production-Ready, Event-Driven E-Commerce Microservices Application designed and implemented using **.NET 8**, **Clean Architecture**, **CQRS with MediatR**, **Ocelot API Gateway**, **Azure Service Bus**, **Azure SQL Database**, and a **Blazor WebAssembly** client built with **Blazorise (Bootstrap 5)**.
 
 ---
 
@@ -17,7 +17,7 @@ A Production-Ready, Event-Driven E-Commerce Microservices Application designed a
 ```mermaid
 flowchart TD
     Client["Blazor WebAssembly Client (Port 5200)<br/>Blazorise UI + Bootstrap 5"]
-    Gateway["Ecommerce.ApiGateway (Port 5000)<br/>YARP Reverse Proxy + Centralized JWT Auth"]
+    Gateway["Ecommerce.ApiGateway (Port 5000)<br/>Ocelot API Gateway + Centralized JWT Auth"]
     OrderSvc["Ecommerce.OrderService.Api (Port 5101)<br/>Clean Architecture + MediatR + EF Core"]
     InvSvc["Ecommerce.InventoryService.Api (Port 5102)<br/>Clean Architecture + MediatR + EF Core"]
     ASB["Azure Service Bus / Event Bus<br/>Topics & Subscriptions (with In-Memory Fallback)"]
@@ -91,7 +91,7 @@ flowchart TD
 - **Databases**: Azure SQL Database / Microsoft SQL Server 2022
 - **Validation**: FluentValidation
 - **Mapping**: AutoMapper
-- **Reverse Proxy**: Microsoft YARP (Yet Another Reverse Proxy)
+- **Reverse Proxy**: Ocelot API Gateway (v23.3)
 - **Security**: JWT Authentication (HMAC-SHA256) with Role-Based Access Control (RBAC)
 - **Logging**: Serilog Structured Logging
 - **API Documentation**: Swagger / OpenAPI with JWT Bearer support
@@ -189,3 +189,4 @@ Update `appsettings.json` in `Ecommerce.OrderService.Api` and `Ecommerce.Invento
 
 ## 📄 License
 This project is licensed under the MIT License.
+

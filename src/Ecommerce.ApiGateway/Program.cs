@@ -4,11 +4,13 @@ using Ecommerce.Shared.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Ocelot.DependencyInjection;
+using Ocelot.Middleware;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog
+// Serilog Structured Logging
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
@@ -16,6 +18,9 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+// Load Ocelot Configuration
+builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
 // JWT Settings & Token Service
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
@@ -63,9 +68,9 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Ecommerce API Gateway",
+        Title = "Ecommerce API Gateway (Ocelot)",
         Version = "v1",
-        Description = "YARP Reverse Proxy & Centralized Authentication Gateway for ECommerce Microservices"
+        Description = "Ocelot API Gateway & Centralized Authentication for E-Commerce Microservices"
     });
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -93,34 +98,42 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Configure YARP Reverse Proxy
-builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+// Register Ocelot Services
+builder.Services.AddOcelot(builder.Configuration);
 
 var app = builder.Build();
+
+app.UseRouting();
 
 // Gateway Request Logging Middleware
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path;
     var method = context.Request.Method;
-    app.Logger.LogInformation("[ApiGateway Request] {Method} {Path}", method, path);
+    app.Logger.LogInformation("[Ocelot Gateway Request] {Method} {Path}", method, path);
     await next();
-    app.Logger.LogInformation("[ApiGateway Response] {Method} {Path} -> {StatusCode}", method, path, context.Response.StatusCode);
+    app.Logger.LogInformation("[Ocelot Gateway Response] {Method} {Path} -> {StatusCode}", method, path, context.Response.StatusCode);
 });
 
 if (app.Environment.IsDevelopment() || true)
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "API Gateway v1"));
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "API Gateway (Ocelot) v1"));
 }
 
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
-app.MapReverseProxy();
+// Map Gateway Controllers (e.g. AuthController /api/auth/*)
+#pragma warning disable ASP0014
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
+#pragma warning restore ASP0014
 
-app.Run();
+// Activate Ocelot Middleware for downstream microservices routing
+await app.UseOcelot();
 
+await app.RunAsync();
