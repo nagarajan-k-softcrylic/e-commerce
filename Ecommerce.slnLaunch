@@ -1,0 +1,27 @@
+[
+  {
+    "Name": "Run All (UI + Microservices)",
+    "Projects": [
+      {
+        "Path": "src\\Ecommerce.InventoryService\\Ecommerce.InventoryService.Api\\Ecommerce.InventoryService.Api.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "src\\Ecommerce.OrderService\\Ecommerce.OrderService.Api\\Ecommerce.OrderService.Api.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "src\\Ecommerce.ApiGateway\\Ecommerce.ApiGateway.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "src\\Ecommerce.WebApp\\Ecommerce.WebApp.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      }
+    ]
+  }
+]

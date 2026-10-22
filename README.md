@@ -121,22 +121,38 @@ flowchart TD
 
 ---
 
-### Method 1: One-Click Startup Script (Local)
-Run the orchestration PowerShell script to start all 4 services in parallel:
+### Method 1: Visual Studio 2022 Multi-Project Profile (.slnLaunch)
+Open `Ecommerce.sln` in **Visual Studio 2022**.
+In the startup project dropdown on the top toolbar, select:
+> **`Run All (UI + Microservices)`**  
+and press **F5** (or **Ctrl+F5** to run without debugging). Visual Studio will simultaneously launch the Blazor WebApp, API Gateway, Order Service, and Inventory Service.
 
+---
+
+### Method 2: VS Code / Cursor Compound Launch Profile
+Open the root repository folder in **VS Code**.
+Go to **Run & Debug (Ctrl+Shift+D)** and select:
+> **`🚀 Run All (UI + All Backend Services)`**  
+and press **F5**. All services will be built and launched together.
+
+---
+
+### Method 3: One-Click Script (Windows)
+Double-click `start-all.bat` (or run in PowerShell):
 ```powershell
 .\scripts\run-services.ps1
 ```
+To stop all running microservices and background daemons at any time, double-click `stop-all.bat`.
 
 Services will be accessible at:
 - **Blazor WebApp**: [http://localhost:5200](http://localhost:5200)
-- **API Gateway (YARP)**: [http://localhost:5000](http://localhost:5000)
+- **API Gateway (Ocelot)**: [http://localhost:5000](http://localhost:5000)
 - **Order Service Swagger**: [http://localhost:5101/swagger](http://localhost:5101/swagger)
 - **Inventory Service Swagger**: [http://localhost:5102/swagger](http://localhost:5102/swagger)
 
 ---
 
-### Method 2: Manual Startup
+### Method 4: Manual Startup
 
 ```bash
 # Terminal 1: Order Service

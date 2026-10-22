@@ -1,0 +1,66 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Inventory Service (5102)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Ecommerce.InventoryService/Ecommerce.InventoryService.Api/bin/Debug/net8.0/Ecommerce.InventoryService.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Ecommerce.InventoryService/Ecommerce.InventoryService.Api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5102"
+      }
+    },
+    {
+      "name": "Order Service (5101)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Ecommerce.OrderService/Ecommerce.OrderService.Api/bin/Debug/net8.0/Ecommerce.OrderService.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Ecommerce.OrderService/Ecommerce.OrderService.Api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5101"
+      }
+    },
+    {
+      "name": "API Gateway (5000)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Ecommerce.ApiGateway/bin/Debug/net8.0/Ecommerce.ApiGateway.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Ecommerce.ApiGateway",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5000"
+      }
+    },
+    {
+      "name": "Blazor WebApp (5200)",
+      "type": "blazorwasm",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/src/Ecommerce.WebApp",
+      "url": "http://localhost:5200"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "🚀 Run All (UI + All Backend Services)",
+      "configurations": [
+        "Inventory Service (5102)",
+        "Order Service (5101)",
+        "API Gateway (5000)",
+        "Blazor WebApp (5200)"
+      ],
+      "stopAll": true
+    }
+  ]
+}
