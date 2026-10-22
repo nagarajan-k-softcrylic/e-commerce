@@ -1,0 +1,130 @@
+@page "/orders"
+@attribute [Authorize]
+@inject IOrderService OrderService
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark mb-1">Orders Management</h2>
+        <p class="text-muted mb-0">View submitted orders and track real-time fulfillment states</p>
+    </div>
+    <div>
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadOrders">
+            <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<Card Class="stat-card border-0 bg-white shadow-sm">
+    <CardBody Class="p-4">
+        @if (_isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Loading orders...</p>
+            </div>
+        }
+        else if (_orders.Count == 0)
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="fa-solid fa-receipt fs-1 mb-3 text-secondary"></i>
+                <h5>No Orders Found</h5>
+                <p class="small">You have not placed any orders yet.</p>
+                <a href="products" class="btn btn-primary btn-sm">Start Shopping</a>
+            </div>
+        }
+        else
+        {
+            <DataGrid TItem="OrderDto"
+                      Data="@_orders"
+                      ShowPager="true"
+                      PageSize="10"
+                      Responsive="true"
+                      Sortable="true"
+                      Hoverable="true">
+                <DataGridColumns>
+                    <DataGridColumn TItem="OrderDto" Field="@nameof(OrderDto.OrderNumber)" Caption="Order Number" Sortable="true">
+                        <DisplayTemplate>
+                            <a href="@($"orders/{context.Id}")" class="fw-semibold text-primary font-monospace text-decoration-none">
+                                @context.OrderNumber
+                            </a>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="OrderDto" Field="@nameof(OrderDto.CreatedDate)" Caption="Order Date" Sortable="true">
+                        <DisplayTemplate>
+                            <span>@context.CreatedDate.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</span>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="OrderDto" Field="@nameof(OrderDto.TotalAmount)" Caption="Amount" Sortable="true">
+                        <DisplayTemplate>
+                            <span class="fw-bold text-dark">@context.TotalAmount.ToString("C2")</span>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="OrderDto" Field="@nameof(OrderDto.Status)" Caption="Status" Sortable="true">
+                        <DisplayTemplate>
+                            @switch (context.Status)
+                            {
+                                case "Pending":
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fa-solid fa-clock-rotate-left me-1"></i> Pending
+                                    </span>
+                                    break;
+                                case "Confirmed":
+                                    <span class="badge bg-success">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Confirmed
+                                    </span>
+                                    break;
+                                case "Failed":
+                                    <span class="badge bg-danger">
+                                        <i class="fa-solid fa-circle-xmark me-1"></i> Failed
+                                    </span>
+                                    break;
+                                default:
+                                    <span class="badge bg-secondary">@context.Status</span>
+                                    break;
+                            }
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="OrderDto" Caption="Action">
+                        <DisplayTemplate>
+                            <a href="@($"orders/{context.Id}")" class="btn btn-outline-primary btn-sm">
+                                <i class="fa-solid fa-eye me-1"></i> Details
+                            </a>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                </DataGridColumns>
+            </DataGrid>
+        }
+    </CardBody>
+</Card>
+
+@code {
+    private List<OrderDto> _orders = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        _isLoading = true;
+        try
+        {
+            _orders = await OrderService.GetOrdersAsync();
+        }
+        catch
+        {
+            _orders = new List<OrderDto>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}
+

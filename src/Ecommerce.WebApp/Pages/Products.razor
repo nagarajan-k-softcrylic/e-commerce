@@ -1,0 +1,182 @@
+@page "/products"
+@inject IProductService ProductService
+@inject CartService CartService
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark mb-1">Product Catalog</h2>
+        <p class="text-muted mb-0">Browse available items and add to your shopping cart</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="checkout" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-cart-shopping me-1"></i> View Cart (@CartService.TotalItemCount)
+        </a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_toastMessage))
+{
+    <Alert Color="Color.Success" Visible="true" Dismissable="true" Class="mb-3">
+        <AlertMessage>Added to Cart!</AlertMessage>
+        <AlertDescription>@_toastMessage</AlertDescription>
+    </Alert>
+}
+
+<Card Class="stat-card border-0 bg-white shadow-sm">
+    <CardBody Class="p-4">
+        <!-- Search bar -->
+        <div class="row mb-3">
+            <div class="col-12 col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" class="form-control" placeholder="Search by name, code, or description..."
+                           @bind="_searchTerm" @bind:event="oninput" @onkeyup="HandleSearchKeyUp" />
+                    <button class="btn btn-outline-secondary" @onclick="RefreshProducts">Search</button>
+                </div>
+            </div>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Loading products...</p>
+            </div>
+        }
+        else
+        {
+            <!-- Blazorise DataGrid -->
+            <DataGrid TItem="ProductDto"
+                      Data="@_filteredProducts"
+                      ShowPager="true"
+                      PageSize="6"
+                      Responsive="true"
+                      Sortable="true"
+                      Filterable="false"
+                      Hoverable="true">
+                <DataGridColumns>
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.ProductCode)" Caption="Product Code" Sortable="true">
+                        <DisplayTemplate>
+                            <span class="badge bg-light text-dark font-monospace">@context.ProductCode</span>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.ProductName)" Caption="Product Name" Sortable="true">
+                        <DisplayTemplate>
+                            <div>
+                                <span class="fw-semibold text-dark">@context.ProductName</span>
+                                <div class="text-muted small text-truncate" style="max-width: 320px;">@context.Description</div>
+                            </div>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.Price)" Caption="Price" Sortable="true">
+                        <DisplayTemplate>
+                            <span class="fw-bold text-primary">@context.Price.ToString("C2")</span>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.AvailableQuantity)" Caption="Available Quantity" Sortable="true">
+                        <DisplayTemplate>
+                            @if (context.AvailableQuantity > 10)
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="fa-solid fa-check me-1"></i> @context.AvailableQuantity In Stock
+                                </span>
+                            }
+                            else if (context.AvailableQuantity > 0)
+                            {
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                    <i class="fa-solid fa-triangle-exclamation me-1"></i> Low Stock (@context.AvailableQuantity)
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                    <i class="fa-solid fa-xmark me-1"></i> Out of Stock
+                                </span>
+                            }
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Caption="Actions">
+                        <DisplayTemplate>
+                            <Button Color="Color.Primary"
+                                    Size="Size.Small"
+                                    Disabled="@(context.AvailableQuantity <= 0)"
+                                    Clicked="@(() => AddToCart(context))">
+                                <i class="fa-solid fa-cart-plus me-1"></i> Add to Cart
+                            </Button>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                </DataGridColumns>
+            </DataGrid>
+        }
+    </CardBody>
+</Card>
+
+@code {
+    private List<ProductDto> _products = new();
+    private List<ProductDto> _filteredProducts = new();
+    private string _searchTerm = string.Empty;
+    private bool _isLoading = true;
+    private string? _toastMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshProducts();
+    }
+
+    private async Task RefreshProducts()
+    {
+        _isLoading = true;
+        try
+        {
+            _products = await ProductService.GetProductsAsync(_searchTerm);
+            FilterProducts();
+        }
+        catch
+        {
+            _products = new List<ProductDto>();
+            _filteredProducts = new List<ProductDto>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            FilterProducts();
+        }
+        else
+        {
+            FilterProducts();
+        }
+    }
+
+    private void FilterProducts()
+    {
+        if (string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            _filteredProducts = _products.ToList();
+        }
+        else
+        {
+            var term = _searchTerm.Trim().ToLowerInvariant();
+            _filteredProducts = _products.Where(p =>
+                p.ProductName.ToLowerInvariant().Contains(term) ||
+                p.ProductCode.ToLowerInvariant().Contains(term) ||
+                p.Description.ToLowerInvariant().Contains(term)).ToList();
+        }
+    }
+
+    private async Task AddToCart(ProductDto product)
+    {
+        await CartService.AddItemAsync(product, 1);
+        _toastMessage = $"{product.ProductName} has been added to your cart.";
+    }
+}

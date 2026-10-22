@@ -1,0 +1,149 @@
+@page "/admin/products"
+@attribute [Authorize(Roles = Roles.Admin)]
+@inject IProductService ProductService
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark mb-1">Product Inventory Administration</h2>
+        <p class="text-muted mb-0">Create, update, and manage catalog items and stock levels</p>
+    </div>
+    <div>
+        <Button Color="Color.Primary" Clicked="OpenAddModal">
+            <i class="fa-solid fa-plus me-1"></i> Add New Product
+        </Button>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <Alert Color="Color.Success" Visible="true" Dismissable="true" Class="mb-3">
+        @_statusMessage
+    </Alert>
+}
+
+<Card Class="stat-card border-0 bg-white shadow-sm">
+    <CardBody Class="p-4">
+        @if (_isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Loading inventory items...</p>
+            </div>
+        }
+        else
+        {
+            <DataGrid TItem="ProductDto"
+                      Data="@_products"
+                      ShowPager="true"
+                      PageSize="8"
+                      Responsive="true"
+                      Sortable="true"
+                      Hoverable="true">
+                <DataGridColumns>
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.ProductCode)" Caption="Product Code" Sortable="true">
+                        <DisplayTemplate>
+                            <span class="badge bg-light text-dark font-monospace">@context.ProductCode</span>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.ProductName)" Caption="Product Name" Sortable="true">
+                        <DisplayTemplate>
+                            <span class="fw-semibold text-dark">@context.ProductName</span>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.Price)" Caption="Unit Price" Sortable="true">
+                        <DisplayTemplate>
+                            <span class="fw-bold">@context.Price.ToString("C2")</span>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Field="@nameof(ProductDto.AvailableQuantity)" Caption="Stock Level" Sortable="true">
+                        <DisplayTemplate>
+                            @if (context.AvailableQuantity > 0)
+                            {
+                                <span class="badge bg-success">@context.AvailableQuantity Units</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">0 Units (Out of Stock)</span>
+                            }
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProductDto" Caption="Management Actions">
+                        <DisplayTemplate>
+                            <div class="btn-group btn-group-sm">
+                                <Button Color="Color.Primary" Outline="true" Size="Size.Small" Clicked="@(() => OpenEditModal(context))">
+                                    <i class="fa-solid fa-pen-to-square me-1"></i> Edit
+                                </Button>
+                                <Button Color="Color.Danger" Outline="true" Size="Size.Small" Clicked="@(() => DeleteProductAsync(context))">
+                                    <i class="fa-solid fa-trash me-1"></i> Delete
+                                </Button>
+                            </div>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                </DataGridColumns>
+            </DataGrid>
+        }
+    </CardBody>
+</Card>
+
+<ProductEditModal @ref="_editModal" OnSaved="HandleSaved" />
+
+@code {
+    private List<ProductDto> _products = new();
+    private bool _isLoading = true;
+    private string? _statusMessage;
+    private ProductEditModal? _editModal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        _isLoading = true;
+        try
+        {
+            _products = await ProductService.GetProductsAsync();
+        }
+        catch
+        {
+            _products = new List<ProductDto>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenAddModal()
+    {
+        if (_editModal != null)
+            await _editModal.OpenAddAsync();
+    }
+
+    private async Task OpenEditModal(ProductDto product)
+    {
+        if (_editModal != null)
+            await _editModal.OpenEditAsync(product);
+    }
+
+    private async Task HandleSaved()
+    {
+        _statusMessage = "Product catalog updated successfully.";
+        await LoadProducts();
+    }
+
+    private async Task DeleteProductAsync(ProductDto product)
+    {
+        var success = await ProductService.DeleteProductAsync(product.Id);
+        if (success)
+        {
+            _statusMessage = $"Product '{product.ProductName}' deleted.";
+            await LoadProducts();
+        }
+    }
+}

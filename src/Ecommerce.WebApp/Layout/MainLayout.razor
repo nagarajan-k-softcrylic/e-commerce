@@ -1,0 +1,118 @@
+@inherits LayoutComponentBase
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject CartService CartService
+
+<div class="d-flex">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar col-auto col-md-3 col-xl-2 px-0 d-none d-md-block">
+        <NavMenu />
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-grow-1 d-flex flex-column min-vh-100">
+        <!-- Top Navbar -->
+        <header class="top-navbar d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <span class="d-md-none fs-4 text-dark" style="cursor: pointer;" @onclick="ToggleMobileMenu">
+                    <i class="fa-solid fa-bars"></i>
+                </span>
+                <span class="fw-semibold text-secondary d-none d-sm-inline">
+                    Cloud Microservices (.NET 8 & Azure Service Bus)
+                </span>
+            </div>
+
+            <!-- User Auth & Quick Actions -->
+            <div class="d-flex align-items-center gap-3">
+                <a href="checkout" class="btn btn-outline-secondary btn-sm position-relative">
+                    <i class="fa-solid fa-cart-shopping me-1"></i> Cart
+                    @if (CartService.TotalItemCount > 0)
+                    {
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            @CartService.TotalItemCount
+                        </span>
+                    }
+                </a>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                                <i class="fa-solid fa-circle-user text-primary fs-5"></i>
+                                <span class="d-none d-md-inline">@context.User.Identity?.Name</span>
+                                @if (context.User.IsInRole(Roles.Admin))
+                                {
+                                    <span class="badge bg-danger">Admin</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Customer</span>
+                                }
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li>
+                                    <span class="dropdown-item-text small text-muted">
+                                        Signed in as <br />
+                                        <strong>@context.User.Identity?.Name</strong>
+                                    </span>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button class="dropdown-item text-danger" @onclick="HandleLogout">
+                                        <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="login" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-right-to-bracket me-1"></i> Sign In
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </header>
+
+        <!-- Offcanvas Mobile Navigation -->
+        @if (_showMobileMenu)
+        {
+            <div class="offcanvas offcanvas-start show d-md-none bg-dark text-white" tabindex="-1" style="visibility: visible; width: 260px;">
+                <div class="offcanvas-header border-bottom border-secondary">
+                    <h5 class="offcanvas-title text-white">Navigation</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="ToggleMobileMenu"></button>
+                </div>
+                <div class="offcanvas-body p-0">
+                    <NavMenu />
+                </div>
+            </div>
+            <div class="modal-backdrop fade show d-md-none" @onclick="ToggleMobileMenu"></div>
+        }
+
+        <!-- Page Body Content -->
+        <main class="flex-grow-1 p-3 p-md-4">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private bool _showMobileMenu = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CartService.InitializeAsync();
+    }
+
+    private void ToggleMobileMenu()
+    {
+        _showMobileMenu = !_showMobileMenu;
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("login", forceLoad: true);
+    }
+}
+

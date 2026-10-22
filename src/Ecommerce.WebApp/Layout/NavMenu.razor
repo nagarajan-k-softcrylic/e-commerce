@@ -1,0 +1,60 @@
+@inject CartService CartService
+@implements IDisposable
+
+<div class="brand d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+        <i class="fa-solid fa-layer-group text-primary fs-4"></i>
+        <span>E-Shop Enterprise</span>
+    </div>
+</div>
+
+<nav class="nav flex-column py-3">
+    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Dashboard</span>
+    </NavLink>
+
+    <NavLink class="nav-link" href="products">
+        <i class="fa-solid fa-box-open"></i>
+        <span>Product Catalog</span>
+    </NavLink>
+
+    <NavLink class="nav-link" href="checkout">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span>Cart / Checkout</span>
+        @if (CartService.TotalItemCount > 0)
+        {
+            <span class="badge bg-primary rounded-pill ms-auto">@CartService.TotalItemCount</span>
+        }
+    </NavLink>
+
+    <NavLink class="nav-link" href="orders">
+        <i class="fa-solid fa-receipt"></i>
+        <span>Orders</span>
+    </NavLink>
+
+    <AuthorizeView Roles="@Roles.Admin">
+        <Authorized>
+            <div class="px-3 pt-3 pb-1 text-uppercase text-muted small fw-bold" style="font-size: 0.72rem; letter-spacing: 1px;">
+                Administration
+            </div>
+            <NavLink class="nav-link" href="admin/products">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                <span>Manage Products</span>
+            </NavLink>
+        </Authorized>
+    </AuthorizeView>
+</nav>
+
+@code {
+    protected override void OnInitialized()
+    {
+        CartService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        CartService.OnChange -= StateHasChanged;
+    }
+}
+

@@ -1,0 +1,262 @@
+@page "/orders/{Id:guid}"
+@attribute [Authorize]
+@inject IOrderService OrderService
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="orders" class="text-decoration-none text-muted small">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Orders
+        </a>
+        <h2 class="fw-bold text-dark mt-1 mb-0">Order @_order?.OrderNumber Details</h2>
+    </div>
+    <div>
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadOrder">
+            <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh Status
+        </button>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Retrieving order information...</p>
+    </div>
+}
+else if (_order == null)
+{
+    <div class="alert alert-danger">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        Order not found or you do not have permission to view it.
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        <!-- Order Info & Items -->
+        <div class="col-12 col-lg-8">
+            <!-- Order Information Header Card -->
+            <Card Class="stat-card border-0 bg-white shadow-sm mb-4">
+                <CardHeader Class="bg-transparent border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Order Information</h5>
+                    @switch (_order.Status)
+                    {
+                        case "Pending":
+                            <span class="badge bg-warning text-dark fs-6">
+                                <i class="fa-solid fa-clock-rotate-left me-1"></i> Status: Pending
+                            </span>
+                            break;
+                        case "Confirmed":
+                            <span class="badge bg-success fs-6">
+                                <i class="fa-solid fa-circle-check me-1"></i> Status: Confirmed
+                            </span>
+                            break;
+                        case "Failed":
+                            <span class="badge bg-danger fs-6">
+                                <i class="fa-solid fa-circle-xmark me-1"></i> Status: Failed
+                            </span>
+                            break;
+                        default:
+                            <span class="badge bg-secondary fs-6">@_order.Status</span>
+                            break;
+                    }
+                </CardHeader>
+                <CardBody Class="pt-2">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <span class="text-muted small">Order Number:</span>
+                            <div class="fw-bold text-dark font-monospace">@_order.OrderNumber</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted small">Created Date:</span>
+                            <div class="fw-semibold">@_order.CreatedDate.ToLocalTime().ToString("f")</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted small">Customer Account:</span>
+                            <div class="fw-semibold">@_order.CustomerId</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted small">Total Transaction Amount:</span>
+                            <div class="fw-bold fs-5 text-primary">@_order.TotalAmount.ToString("C2")</div>
+                        </div>
+                    </div>
+                </CardBody>
+            </Card>
+
+            <!-- Order Items Table Card -->
+            <Card Class="stat-card border-0 bg-white shadow-sm">
+                <CardHeader Class="bg-transparent border-0 pt-3 pb-0">
+                    <h5 class="fw-bold mb-0">Ordered Items (@_order.Items.Count)</h5>
+                </CardHeader>
+                <CardBody Class="p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Product ID</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _order.Items)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold text-dark">@item.ProductName</td>
+                                        <td class="small font-monospace text-muted">@item.ProductId</td>
+                                        <td>@item.Quantity</td>
+                                        <td>@item.Price.ToString("C2")</td>
+                                        <td class="fw-bold text-dark">@((item.Quantity * item.Price).ToString("C2"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </CardBody>
+            </Card>
+        </div>
+
+        <!-- Event Timeline Card -->
+        <div class="col-12 col-lg-4">
+            <Card Class="stat-card border-0 bg-white shadow-sm">
+                <CardHeader Class="bg-transparent border-0 pt-3 pb-2">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fa-solid fa-timeline text-primary me-2"></i>Event Timeline
+                    </h5>
+                    <p class="text-muted small mb-0">Azure Service Bus event-driven lifecycle</p>
+                </CardHeader>
+                <CardBody>
+                    <ul class="timeline">
+                        <!-- Step 1: Order Created -->
+                        <li class="timeline-item">
+                            <div class="timeline-marker success">
+                                <i class="fa-solid fa-check text-white" style="font-size: 0.65rem;"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="fw-bold text-dark">1. Order Created</div>
+                                <span class="badge bg-secondary font-monospace" style="font-size: 0.7rem;">OrderCreatedEvent</span>
+                                <p class="text-muted small mt-1 mb-0">
+                                    Pending order record persisted in database. Published event to Azure Service Bus topic <code>order-created-topic</code>.
+                                </p>
+                            </div>
+                        </li>
+
+                        <!-- Step 2: Inventory Reserved / Validated -->
+                        <li class="timeline-item">
+                            @if (_order.Status == "Confirmed")
+                            {
+                                <div class="timeline-marker success">
+                                    <i class="fa-solid fa-check text-white" style="font-size: 0.65rem;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-success">2. Inventory Reserved</div>
+                                    <span class="badge bg-success font-monospace" style="font-size: 0.7rem;">InventoryReservedEvent</span>
+                                    <p class="text-muted small mt-1 mb-0">
+                                        Inventory Microservice consumed event, validated stock availability, and deducted requested units.
+                                    </p>
+                                </div>
+                            }
+                            else if (_order.Status == "Failed")
+                            {
+                                <div class="timeline-marker failed">
+                                    <i class="fa-solid fa-xmark text-white" style="font-size: 0.65rem;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-danger">2. Inventory Reservation Failed</div>
+                                    <span class="badge bg-danger font-monospace" style="font-size: 0.7rem;">InventoryFailedEvent</span>
+                                    <p class="text-muted small mt-1 mb-0">
+                                        Inventory Microservice detected insufficient stock or missing SKU.
+                                    </p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="timeline-marker bg-warning">
+                                    <i class="fa-solid fa-hourglass text-white" style="font-size: 0.65rem;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-warning">2. Stock Validation in Progress</div>
+                                    <p class="text-muted small mt-1 mb-0">
+                                        Awaiting Azure Service Bus message delivery and warehouse lock...
+                                    </p>
+                                </div>
+                            }
+                        </li>
+
+                        <!-- Step 3: Order Confirmed / Finalized -->
+                        <li class="timeline-item">
+                            @if (_order.Status == "Confirmed")
+                            {
+                                <div class="timeline-marker success">
+                                    <i class="fa-solid fa-flag-checkered text-white" style="font-size: 0.65rem;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-success">3. Order Confirmed</div>
+                                    <p class="text-muted small mt-1 mb-0">
+                                        Order Service handled <code>InventoryReservedEvent</code> and marked the order state as <strong>Confirmed</strong>.
+                                    </p>
+                                </div>
+                            }
+                            else if (_order.Status == "Failed")
+                            {
+                                <div class="timeline-marker failed">
+                                    <i class="fa-solid fa-ban text-white" style="font-size: 0.65rem;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-danger">3. Order Marked Failed</div>
+                                    <p class="text-muted small mt-1 mb-0">
+                                        Order marked as Failed. Customer notification issued and no funds settled.
+                                    </p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="timeline-marker bg-secondary">
+                                    <i class="fa-solid fa-ellipsis text-white" style="font-size: 0.65rem;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="fw-bold text-secondary">3. Final Status Update</div>
+                                    <p class="text-muted small mt-1 mb-0">
+                                        Pending state transition callback.
+                                    </p>
+                                </div>
+                            }
+                        </li>
+                    </ul>
+                </CardBody>
+            </Card>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private OrderDto? _order;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrder();
+    }
+
+    private async Task LoadOrder()
+    {
+        _isLoading = true;
+        try
+        {
+            _order = await OrderService.GetOrderByIdAsync(Id);
+        }
+        catch
+        {
+            _order = null;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}
+

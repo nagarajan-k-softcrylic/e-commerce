@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ecommerce-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Password123!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  apigateway:
+    build:
+      context: .
+      dockerfile: src/Ecommerce.ApiGateway/Dockerfile
+    container_name: ecommerce-apigateway
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      - orderservice
+      - inventoryservice
+
+  orderservice:
+    build:
+      context: .
+      dockerfile: src/Ecommerce.OrderService/Ecommerce.OrderService.Api/Dockerfile
+    container_name: ecommerce-orderservice
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5101
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=Ecommerce_OrderDb;User Id=sa;Password=Password123!;TrustServerCertificate=True
+    ports:
+      - "5101:5101"
+    depends_on:
+      - sqlserver
+
+  inventoryservice:
+    build:
+      context: .
+      dockerfile: src/Ecommerce.InventoryService/Ecommerce.InventoryService.Api/Dockerfile
+    container_name: ecommerce-inventoryservice
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5102
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=Ecommerce_InventoryDb;User Id=sa;Password=Password123!;TrustServerCertificate=True
+    ports:
+      - "5102:5102"
+    depends_on:
+      - sqlserver
+
+  webapp:
+    build:
+      context: .
+      dockerfile: src/Ecommerce.WebApp/Dockerfile
+    container_name: ecommerce-webapp
+    ports:
+      - "5200:80"
+    depends_on:
+      - apigateway
+
+volumes:
+  sqlserver-data:
+

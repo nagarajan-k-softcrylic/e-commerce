@@ -1,0 +1,199 @@
+@inject IProductService ProductService
+
+<Modal @ref="_modalRef">
+    <ModalContent Centered="true" Size="ModalSize.Large">
+        <ModalHeader>
+            <ModalTitle>
+                <i class="fa-solid fa-box-archive text-primary me-2"></i>
+                @(_isEdit ? "Edit Product" : "Add New Product")
+            </ModalTitle>
+            <CloseButton Clicked="CloseModal" />
+        </ModalHeader>
+        <ModalBody>
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <Alert Color="Color.Danger" Visible="true" Class="mb-3">
+                    @_errorMessage
+                </Alert>
+            }
+
+            <Validations @ref="_validationsRef" Mode="ValidationMode.Auto" Model="@_model">
+                <Validation Validator="@ValidationRule.IsNotEmpty">
+                    <Field>
+                        <FieldLabel>Product Code</FieldLabel>
+                        <TextEdit @bind-Text="@_model.ProductCode" Placeholder="e.g. PROD-IT-001">
+                            <Feedback>
+                                <ValidationError>Product code is required.</ValidationError>
+                            </Feedback>
+                        </TextEdit>
+                    </Field>
+                </Validation>
+
+                <Validation Validator="@ValidationRule.IsNotEmpty">
+                    <Field>
+                        <FieldLabel>Product Name</FieldLabel>
+                        <TextEdit @bind-Text="@_model.ProductName" Placeholder="e.g. Mechanical Gaming Keyboard">
+                            <Feedback>
+                                <ValidationError>Product name is required.</ValidationError>
+                            </Feedback>
+                        </TextEdit>
+                    </Field>
+                </Validation>
+
+                <Field>
+                    <FieldLabel>Description</FieldLabel>
+                    <MemoEdit @bind-Text="@_model.Description" Rows="3" Placeholder="Product technical specs & description..." />
+                </Field>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Price ($)</FieldLabel>
+                            <NumericEdit TValue="decimal" @bind-Value="@_model.Price" Min="0.01m" Decimals="2" />
+                        </Field>
+                    </div>
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Available Quantity</FieldLabel>
+                            <NumericEdit TValue="int" @bind-Value="@_model.AvailableQuantity" Min="0" />
+                        </Field>
+                    </div>
+                </div>
+            </Validations>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="CloseModal">Cancel</Button>
+            <Button Color="Color.Primary" Clicked="SaveProductAsync" Loading="@_isSaving">
+                <i class="fa-solid fa-floppy-disk me-1"></i> Save Product
+            </Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private Modal? _modalRef;
+    private Validations? _validationsRef;
+    private bool _isEdit = false;
+    private Guid _productId;
+    private bool _isSaving = false;
+    private string? _errorMessage;
+
+    private ProductFormModel _model = new();
+
+    public class ProductFormModel
+    {
+        public string ProductCode { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Price { get; set; } = 19.99m;
+        public int AvailableQuantity { get; set; } = 10;
+    }
+
+    public async Task OpenAddAsync()
+    {
+        _isEdit = false;
+        _productId = Guid.Empty;
+        _model = new ProductFormModel();
+        _errorMessage = null;
+
+        if (_validationsRef != null)
+            await _validationsRef.ClearAll();
+
+        if (_modalRef != null)
+            await _modalRef.Show();
+    }
+
+    public async Task OpenEditAsync(ProductDto product)
+    {
+        _isEdit = true;
+        _productId = product.Id;
+        _model = new ProductFormModel
+        {
+            ProductCode = product.ProductCode,
+            ProductName = product.ProductName,
+            Description = product.Description,
+            Price = product.Price,
+            AvailableQuantity = product.AvailableQuantity
+        };
+        _errorMessage = null;
+
+        if (_validationsRef != null)
+            await _validationsRef.ClearAll();
+
+        if (_modalRef != null)
+            await _modalRef.Show();
+    }
+
+    private async Task CloseModal()
+    {
+        if (_modalRef != null)
+            await _modalRef.Hide();
+    }
+
+    private async Task SaveProductAsync()
+    {
+        if (_validationsRef != null && !await _validationsRef.ValidateAll())
+            return;
+
+        if (_model.Price <= 0)
+        {
+            _errorMessage = "Price must be greater than zero.";
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (_isEdit)
+            {
+                var updateDto = new UpdateProductDto
+                {
+                    ProductCode = _model.ProductCode,
+                    ProductName = _model.ProductName,
+                    Description = _model.Description,
+                    Price = _model.Price,
+                    AvailableQuantity = _model.AvailableQuantity
+                };
+                var result = await ProductService.UpdateProductAsync(_productId, updateDto);
+                if (result == null)
+                {
+                    _errorMessage = "Failed to update product. Please verify inputs or API Gateway status.";
+                    return;
+                }
+            }
+            else
+            {
+                var createDto = new CreateProductDto
+                {
+                    ProductCode = _model.ProductCode,
+                    ProductName = _model.ProductName,
+                    Description = _model.Description,
+                    Price = _model.Price,
+                    AvailableQuantity = _model.AvailableQuantity
+                };
+                var result = await ProductService.CreateProductAsync(createDto);
+                if (result == null)
+                {
+                    _errorMessage = "Failed to create product. Product code might already exist.";
+                    return;
+                }
+            }
+
+            await CloseModal();
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error saving product: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}
+
